@@ -10,6 +10,8 @@ import heroku3
 
 # ======================== متغيرات البيئة ========================
 BOT_TOKEN = os.environ.get("TOKEN", "")
+API_ID = int(os.environ.get("API_ID", 0))
+API_HASH = os.environ.get("API_HASH", "")
 CHANNEL_USERNAME = os.environ.get("CHANNEL_USERNAME", "")
 TIMEZONE_STR = os.environ.get("TIMEZONE", "Asia/Baghdad")
 DEVELOPER_ID = int(os.environ.get("DEVELOPER_ID", "6373993992"))
@@ -22,6 +24,14 @@ AUTO_BIO_ENABLED = os.environ.get("AUTO_BIO_ENABLED", "false").lower() == "true"
 DIGIT_STYLE = int(os.environ.get("DIGIT_STYLE", "3"))  # 1: عادي، 2: عريض 𝟷𝟸𝟹، 3: عريض 𝟬𝟭𝟮
 CUSTOM_BIO = os.environ.get("CUSTOM_BIO", f"المطور @BD_0I")
 
+# التحقق من البيانات الأساسية
+if not BOT_TOKEN:
+    raise ValueError("❌ TOKEN must be set")
+if not API_ID or not API_HASH:
+    raise ValueError("❌ API_ID and API_HASH must be set (get them from my.telegram.org)")
+if not CHANNEL_USERNAME:
+    raise ValueError("❌ CHANNEL_USERNAME must be set")
+
 # ======================== تعريفات الأرقام ========================
 DIGIT_STYLES = {
     1: {'0':'0','1':'1','2':'2','3':'3','4':'4','5':'5','6':'6','7':'7','8':'8','9':'9'},
@@ -30,7 +40,7 @@ DIGIT_STYLES = {
 }
 
 # ======================== إنشاء عميل البوت ========================
-bot = TelegramClient('bot_session', api_id=None, api_hash=None).start(bot_token=BOT_TOKEN)
+bot = TelegramClient('bot_session', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
 
 # ======================== دوال مساعدة ========================
 def convert_digits(number_str, style):
@@ -97,7 +107,7 @@ def update_config_var(key, value):
         print(f"⚠️ فشل تحديث {key}: {e}")
         return False
 
-# ======================== دوال حذف آخر رسالة ========================
+# ======================== دالة حذف آخر رسالة (تستخدم فقط لتغيير الاسم) ========================
 async def delete_last_message():
     try:
         get_updates_url = f"https://api.telegram.org/bot{BOT_TOKEN}/getUpdates"
@@ -126,7 +136,7 @@ async def delete_last_message():
     except:
         return False
 
-# ======================== تغيير اسم القناة ========================
+# ======================== تغيير اسم القناة (مع حذف آخر رسالة) ========================
 async def rename_channel():
     global AUTO_RENAME_ENABLED
     if not AUTO_RENAME_ENABLED:
@@ -143,14 +153,14 @@ async def rename_channel():
         result = response.json()
         if result.get("ok"):
             print("✅ تم تغيير الاسم")
-            await asyncio.sleep(2)
-            await delete_last_message()
+            await asyncio.sleep(2)  # انتظار لظهور رسالة النظام
+            await delete_last_message()  # حذف آخر رسالة فقط هنا
         else:
             print(f"❌ فشل تغيير الاسم: {result.get('description')}")
     except Exception as e:
         print(f"⚠️ خطأ في تغيير الاسم: {e}")
 
-# ======================== تغيير البايو ========================
+# ======================== تغيير البايو (بدون حذف) ========================
 async def update_bio():
     global AUTO_BIO_ENABLED
     if not AUTO_BIO_ENABLED:
@@ -209,7 +219,7 @@ async def callback_handler(event):
         update_config_var("AUTO_RENAME_ENABLED", str(new_state).lower())
         globals()['AUTO_RENAME_ENABLED'] = new_state
         await event.answer(f"تم {'تفعيل' if new_state else 'إيقاف'} الاسم الوقتي", alert=True)
-        await start_handler(event)  # العودة للقائمة الرئيسية
+        await start_handler(event)
     
     # ===== قائمة البايو الوقتي =====
     elif data == "bio_menu":
