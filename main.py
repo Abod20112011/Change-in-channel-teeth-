@@ -16,10 +16,16 @@ DEVELOPER_ID = int(os.environ.get("DEVELOPER_ID", "6373993992"))
 HEROKU_API_KEY = os.environ.get("HEROKU_API_KEY", "")
 HEROKU_APP_NAME = os.environ.get("HEROKU_APP_NAME", "")
 
-# حالات التشغيل (تقرأ من متغيرات البيئة، لكن سنعطيها قيماً افتراضية هنا)
+# حالات التشغيل
 AUTO_RENAME_ENABLED = os.environ.get("AUTO_RENAME_ENABLED", "true").lower() == "true"
 AUTO_BIO_ENABLED = os.environ.get("AUTO_BIO_ENABLED", "false").lower() == "true"
 CUSTOM_BIO = os.environ.get("CUSTOM_BIO", f"المطور @BD_0I")
+
+# نمط الأرقام (افتراضي: عريض 𝟬𝟭𝟮𝟯𝟰𝟱𝟲𝟳𝟴𝟵)
+DIGIT_MAP_STR = os.environ.get("DIGIT_MAP", "𝟬𝟭𝟮𝟯𝟰𝟱𝟲𝟳𝟴𝟵")
+if len(DIGIT_MAP_STR) != 10:
+    DIGIT_MAP_STR = "𝟬𝟭𝟮𝟯𝟰𝟱𝟲𝟳𝟴𝟵"
+DIGIT_MAP = {str(i): DIGIT_MAP_STR[i] for i in range(10)}
 
 # التحقق من البيانات الأساسية
 if not BOT_TOKEN:
@@ -30,21 +36,14 @@ if not CHANNEL_USERNAME:
     raise ValueError("❌ CHANNEL_USERNAME must be set")
 
 # ======================== إعدادات ثابتة ========================
-# الأرقام العريضة (النمط الوحيد)
-BOLD_DIGITS = {
-    '0': '𝟬', '1': '𝟭', '2': '𝟮', '3': '𝟯', '4': '𝟰',
-    '5': '𝟱', '6': '𝟲', '7': '𝟳', '8': '𝟴', '9': '𝟵'
-}
-
-# توقيت العراق (ثابت)
 TIMEZONE = pytz.timezone('Asia/Baghdad')
 
 # ======================== إنشاء عميل البوت ========================
 bot = TelegramClient('bot_session', API_ID, API_HASH)
 
 # ======================== دوال مساعدة ========================
-def convert_to_bold(number_str):
-    return ''.join(BOLD_DIGITS.get(ch, ch) for ch in number_str)
+def convert_digits(number_str):
+    return ''.join(DIGIT_MAP.get(ch, ch) for ch in number_str)
 
 def get_formatted_time():
     now = datetime.now(TIMEZONE)
@@ -66,9 +65,9 @@ def get_formatted_time():
         period = "ص"
     
     time_str = f"{hour_12:02d}:{minute:02d}"
-    bold_time = convert_to_bold(time_str)
+    styled_time = convert_digits(time_str)
     
-    return f"مَ {bold_time} {period}َ"
+    return f"𓏺 {styled_time} . {period}َ"
 
 def get_formatted_bio():
     now = datetime.now(TIMEZONE)
@@ -89,18 +88,21 @@ def get_formatted_bio():
         period = "ص"
     
     time_str = f"{hour_12:02d}:{minute:02d}"
-    bold_time = convert_to_bold(time_str)
+    styled_time = convert_digits(time_str)
     
-    return f"{CUSTOM_BIO} {bold_time} {period}"
+    # 4 مسافات قبل الوقت
+    return f"{CUSTOM_BIO}    {styled_time} . {period}َ"
 
-# ======================== تحديث متغيرات البيئة عبر Heroku API ========================
-def update_config_var(key, value):
+# ======================== تحديث متغيرات البيئة وإعادة التشغيل ========================
+def update_config_and_restart(key, value):
     if not HEROKU_API_KEY or not HEROKU_APP_NAME:
         return False
     try:
         heroku = heroku3.from_key(HEROKU_API_KEY)
         app = heroku.apps()[HEROKU_APP_NAME]
-        app.update_config({key: str(value)})
+        app.update_config({key: value})
+        # إعادة تشغيل التطبيق
+        app.restart()
         return True
     except Exception as e:
         print(f"⚠️ فشل تحديث {key}: {e}")
@@ -191,6 +193,7 @@ async def start_handler(event):
     buttons = [
         [Button.inline("📛 الاسم الوقتي", data="rename_menu")],
         [Button.inline("📝 البايو الوقتي", data="bio_menu")],
+        [Button.inline("🔢 تغيير نمط الأرقام", data="change_font")],
         [Button.inline("📊 الحالة العامة", data="status")]
     ]
     await event.reply("🔧 **لوحة تحكم البوت الرئيسية**\nاختر ما تريد:", buttons=buttons)
@@ -214,7 +217,11 @@ async def callback_handler(event):
     
     elif data == "rename_toggle":
         new_state = not AUTO_RENAME_ENABLED
-        update_config_var("AUTO_RENAME_ENABLED", str(new_state).lower())
+        # تحديث متغير البيئة
+        if HEROKU_API_KEY and HEROKU_APP_NAME:
+            heroku = heroku3.from_key(HEROKU_API_KEY)
+            app = heroku.apps()[HEROKU_APP_NAME]
+            app.update_config({"AUTO_RENAME_ENABLED": str(new_state).lower()})
         globals()['AUTO_RENAME_ENABLED'] = new_state
         await event.answer(f"تم {'تفعيل' if new_state else 'إيقاف'} الاسم الوقتي", alert=True)
         await start_handler(event)
@@ -231,7 +238,10 @@ async def callback_handler(event):
     
     elif data == "bio_toggle":
         new_state = not AUTO_BIO_ENABLED
-        update_config_var("AUTO_BIO_ENABLED", str(new_state).lower())
+        if HEROKU_API_KEY and HEROKU_APP_NAME:
+            heroku = heroku3.from_key(HEROKU_API_KEY)
+            app = heroku.apps()[HEROKU_APP_NAME]
+            app.update_config({"AUTO_BIO_ENABLED": str(new_state).lower()})
         globals()['AUTO_BIO_ENABLED'] = new_state
         await event.answer(f"تم {'تفعيل' if new_state else 'إيقاف'} البايو الوقتي", alert=True)
         await start_handler(event)
@@ -241,10 +251,36 @@ async def callback_handler(event):
             await event.edit("📝 أرسل الآن النص الجديد للبايو (سيتم إضافة الوقت تلقائياً):")
             response = await conv.get_response()
             new_bio = response.text
-            update_config_var("CUSTOM_BIO", new_bio)
+            if HEROKU_API_KEY and HEROKU_APP_NAME:
+                heroku = heroku3.from_key(HEROKU_API_KEY)
+                app = heroku.apps()[HEROKU_APP_NAME]
+                app.update_config({"CUSTOM_BIO": new_bio})
             globals()['CUSTOM_BIO'] = new_bio
             await response.reply("✅ تم تعيين نص البايو بنجاح!")
         await start_handler(event)
+    
+    # ===== تغيير نمط الأرقام =====
+    elif data == "change_font":
+        await event.edit(
+            "🔤 **تغيير نمط الأرقام**\n"
+            "أرسل سلسلة من 10 أحرف تمثل الأرقام من 0 إلى 9 بالترتيب.\n"
+            "مثال للخط العريض: `𝟬𝟭𝟮𝟯𝟰𝟱𝟲𝟳𝟴𝟵`\n"
+            "مثال للأرقام العادية: `0123456789`\n\n"
+            "سيتم حفظ النمط وإعادة تشغيل البوت."
+        )
+        # انتظار الرد
+        async with bot.conversation(DEVELOPER_ID) as conv:
+            response = await conv.get_response()
+            new_map = response.text.strip()
+            if len(new_map) != 10:
+                await response.reply("❌ يجب أن يكون الطول 10 أحرف بالضبط. حاول مرة أخرى من البداية.")
+                await start_handler(event)
+                return
+            # تحديث متغير البيئة
+            if update_config_and_restart("DIGIT_MAP", new_map):
+                await response.reply("✅ تم تحديث نمط الأرقام وإعادة تشغيل البوت. سيتم تفعيل التغيير بعد لحظات.")
+            else:
+                await response.reply("⚠️ فشل تحديث النمط (Heroku API غير مضبوط).")
     
     # ===== عرض الحالة =====
     elif data == "status":
@@ -252,7 +288,8 @@ async def callback_handler(event):
             f"📊 **الحالة العامة**\n"
             f"الاسم الوقتي: {'✅ مفعل' if AUTO_RENAME_ENABLED else '⏸️ معطل'}\n"
             f"البايو الوقتي: {'✅ مفعل' if AUTO_BIO_ENABLED else '⏸️ معطل'}\n"
-            f"نص البايو: `{CUSTOM_BIO}`"
+            f"نص البايو: `{CUSTOM_BIO}`\n"
+            f"نمط الأرقام الحالي: `{DIGIT_MAP_STR}`"
         )
         buttons = [[Button.inline("🔙 رجوع", data="back_main")]]
         await event.edit(status_text, buttons=buttons)
@@ -284,6 +321,7 @@ async def main():
     print(f"🤖 المطور: {DEVELOPER_ID}")
     print(f"📛 الاسم: {'مفعل' if AUTO_RENAME_ENABLED else 'معطل'}")
     print(f"📝 البايو: {'مفعل' if AUTO_BIO_ENABLED else 'معطل'}")
+    print(f"🔤 نمط الأرقام: {DIGIT_MAP_STR}")
     print("="*60)
     
     # تشغيل الحلقات معاً
