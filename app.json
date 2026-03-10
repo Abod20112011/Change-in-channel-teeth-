@@ -1,0 +1,33 @@
+{
+  "name": "Channel Auto Rename Bot",
+  "description": "بوت تيليجرام لتغيير اسم القناة تلقائياً مع توقيت العراق",
+  "keywords": [
+    "telegram",
+    "bot",
+    "channel",
+    "rename"
+  ],
+  "repository": "https://github.com/اسم_المستخدم_خاصتك/اسم_المستودع",
+  "env": {
+    "TOKEN": {
+      "description": "توكن البوت الخاص بك من @BotFather",
+      "value": "",
+      "required": true
+    },
+    "CHANNEL_USERNAME": {
+      "description": "معرف القناة (مثال: @ZQQ27)",
+      "value": "",
+      "required": true
+    },
+    "TIMEZONE": {
+      "description": "المنطقة الزمنية (افتراضي: Asia/Baghdad)",
+      "value": "Asia/Baghdad",
+      "required": false
+    }
+  },
+  "buildpacks": [
+    {
+      "url": "heroku/python"
+    }
+  ]
+}
