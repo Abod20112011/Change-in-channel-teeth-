@@ -183,6 +183,60 @@ async def update_bio():
     except Exception as e:
         print(f"⚠️ خطأ في تحديث البايو: {e}")
 
+# ======================== دوال إنشاء النصوص والأزرار (للتعديل) ========================
+def get_main_menu_text():
+    return "🔧 **لوحة تحكم البوت الرئيسية**\nاختر ما تريد:"
+
+def get_main_menu_buttons():
+    return [
+        [Button.inline("📛 الاسم الوقتي", data="rename_menu")],
+        [Button.inline("📝 البايو الوقتي", data="bio_menu")],
+        [Button.inline("🔢 تغيير نمط الأرقام", data="change_font")],
+        [Button.inline("📊 الحالة العامة", data="status")]
+    ]
+
+def get_rename_menu_text():
+    status = "✅ مفعل" if AUTO_RENAME_ENABLED else "⏸️ معطل"
+    return f"📛 **الاسم الوقتي**\nالحالة: {status}\nاختر إجراء:"
+
+def get_rename_menu_buttons():
+    return [
+        [Button.inline("✅ تشغيل" if not AUTO_RENAME_ENABLED else "⏸️ إيقاف", data="rename_toggle")],
+        [Button.inline("🔙 رجوع للقائمة الرئيسية", data="back_main")]
+    ]
+
+def get_bio_menu_text():
+    status = "✅ مفعل" if AUTO_BIO_ENABLED else "⏸️ معطل"
+    return f"📝 **البايو الوقتي**\nالحالة: {status}\nالنص الحالي: `{CUSTOM_BIO}`\nاختر إجراء:"
+
+def get_bio_menu_buttons():
+    return [
+        [Button.inline("✅ تشغيل" if not AUTO_BIO_ENABLED else "⏸️ إيقاف", data="bio_toggle")],
+        [Button.inline("✏️ تعيين نص البايو", data="set_bio")],
+        [Button.inline("🔙 رجوع للقائمة الرئيسية", data="back_main")]
+    ]
+
+def get_font_change_text():
+    return (
+        "🔤 **تغيير نمط الأرقام**\n"
+        "أرسل سلسلة من 10 أحرف تمثل الأرقام من 0 إلى 9 بالترتيب.\n"
+        "مثال للخط العريض: `𝟬𝟭𝟮𝟯𝟰𝟱𝟲𝟳𝟴𝟵`\n"
+        "مثال للأرقام العادية: `0123456789`\n\n"
+        "سيتم حفظ النمط وإعادة تشغيل البوت."
+    )
+
+def get_status_text():
+    return (
+        f"📊 **الحالة العامة**\n"
+        f"الاسم الوقتي: {'✅ مفعل' if AUTO_RENAME_ENABLED else '⏸️ معطل'}\n"
+        f"البايو الوقتي: {'✅ مفعل' if AUTO_BIO_ENABLED else '⏸️ معطل'}\n"
+        f"نص البايو: `{CUSTOM_BIO}`\n"
+        f"نمط الأرقام الحالي: `{DIGIT_MAP_STR}`"
+    )
+
+def get_status_buttons():
+    return [[Button.inline("🔙 رجوع", data="back_main")]]
+
 # ======================== بوت التحكم (الخاص بالمطور) ========================
 @bot.on(events.NewMessage(pattern='/start', func=lambda e: e.is_private))
 async def start_handler(event):
@@ -190,13 +244,10 @@ async def start_handler(event):
         await event.reply("⚠️ هذا البوت خاص بالمطور فقط.")
         return
     
-    buttons = [
-        [Button.inline("📛 الاسم الوقتي", data="rename_menu")],
-        [Button.inline("📝 البايو الوقتي", data="bio_menu")],
-        [Button.inline("🔢 تغيير نمط الأرقام", data="change_font")],
-        [Button.inline("📊 الحالة العامة", data="status")]
-    ]
-    await event.reply("🔧 **لوحة تحكم البوت الرئيسية**\nاختر ما تريد:", buttons=buttons)
+    await event.reply(
+        get_main_menu_text(),
+        buttons=get_main_menu_buttons()
+    )
 
 @bot.on(events.CallbackQuery)
 async def callback_handler(event):
@@ -206,14 +257,11 @@ async def callback_handler(event):
     
     data = event.data.decode()
     
-    # ===== قائمة الاسم الوقتي =====
     if data == "rename_menu":
-        status = "✅ مفعل" if AUTO_RENAME_ENABLED else "⏸️ معطل"
-        buttons = [
-            [Button.inline("✅ تشغيل" if not AUTO_RENAME_ENABLED else "⏸️ إيقاف", data="rename_toggle")],
-            [Button.inline("🔙 رجوع للقائمة الرئيسية", data="back_main")]
-        ]
-        await event.edit(f"📛 **الاسم الوقتي**\nالحالة: {status}\nاختر إجراء:", buttons=buttons)
+        await event.edit(
+            get_rename_menu_text(),
+            buttons=get_rename_menu_buttons()
+        )
     
     elif data == "rename_toggle":
         new_state = not AUTO_RENAME_ENABLED
@@ -224,17 +272,17 @@ async def callback_handler(event):
             app.update_config({"AUTO_RENAME_ENABLED": str(new_state).lower()})
         globals()['AUTO_RENAME_ENABLED'] = new_state
         await event.answer(f"تم {'تفعيل' if new_state else 'إيقاف'} الاسم الوقتي", alert=True)
-        await start_handler(event)
+        # العودة للقائمة الرئيسية (تعديل نفس الرسالة)
+        await event.edit(
+            get_main_menu_text(),
+            buttons=get_main_menu_buttons()
+        )
     
-    # ===== قائمة البايو الوقتي =====
     elif data == "bio_menu":
-        status = "✅ مفعل" if AUTO_BIO_ENABLED else "⏸️ معطل"
-        buttons = [
-            [Button.inline("✅ تشغيل" if not AUTO_BIO_ENABLED else "⏸️ إيقاف", data="bio_toggle")],
-            [Button.inline("✏️ تعيين نص البايو", data="set_bio")],
-            [Button.inline("🔙 رجوع للقائمة الرئيسية", data="back_main")]
-        ]
-        await event.edit(f"📝 **البايو الوقتي**\nالحالة: {status}\nالنص الحالي: `{CUSTOM_BIO}`\nاختر إجراء:", buttons=buttons)
+        await event.edit(
+            get_bio_menu_text(),
+            buttons=get_bio_menu_buttons()
+        )
     
     elif data == "bio_toggle":
         new_state = not AUTO_BIO_ENABLED
@@ -244,11 +292,16 @@ async def callback_handler(event):
             app.update_config({"AUTO_BIO_ENABLED": str(new_state).lower()})
         globals()['AUTO_BIO_ENABLED'] = new_state
         await event.answer(f"تم {'تفعيل' if new_state else 'إيقاف'} البايو الوقتي", alert=True)
-        await start_handler(event)
+        await event.edit(
+            get_main_menu_text(),
+            buttons=get_main_menu_buttons()
+        )
     
     elif data == "set_bio":
+        # سنستخدم محادثة منفصلة للحصول على النص، ثم نعدل الرسالة الأصلية بعد ذلك
+        await event.edit("📝 أرسل الآن النص الجديد للبايو (سيتم إضافة الوقت تلقائياً):")
+        # ننتظر الرد
         async with bot.conversation(DEVELOPER_ID) as conv:
-            await event.edit("📝 أرسل الآن النص الجديد للبايو (سيتم إضافة الوقت تلقائياً):")
             response = await conv.get_response()
             new_bio = response.text
             if HEROKU_API_KEY and HEROKU_APP_NAME:
@@ -256,47 +309,45 @@ async def callback_handler(event):
                 app = heroku.apps()[HEROKU_APP_NAME]
                 app.update_config({"CUSTOM_BIO": new_bio})
             globals()['CUSTOM_BIO'] = new_bio
+            # نعدل الرسالة الأصلية التي تطلب النص إلى رسالة تأكيد ثم نعود للقائمة
             await response.reply("✅ تم تعيين نص البايو بنجاح!")
-        await start_handler(event)
-    
-    # ===== تغيير نمط الأرقام =====
-    elif data == "change_font":
+        # العودة للقائمة الرئيسية (تعديل رسالة الـ callback)
         await event.edit(
-            "🔤 **تغيير نمط الأرقام**\n"
-            "أرسل سلسلة من 10 أحرف تمثل الأرقام من 0 إلى 9 بالترتيب.\n"
-            "مثال للخط العريض: `𝟬𝟭𝟮𝟯𝟰𝟱𝟲𝟳𝟴𝟵`\n"
-            "مثال للأرقام العادية: `0123456789`\n\n"
-            "سيتم حفظ النمط وإعادة تشغيل البوت."
+            get_main_menu_text(),
+            buttons=get_main_menu_buttons()
         )
-        # انتظار الرد
+    
+    elif data == "change_font":
+        await event.edit(get_font_change_text())
+        # ننتظر الرد
         async with bot.conversation(DEVELOPER_ID) as conv:
             response = await conv.get_response()
             new_map = response.text.strip()
             if len(new_map) != 10:
-                await response.reply("❌ يجب أن يكون الطول 10 أحرف بالضبط. حاول مرة أخرى من البداية.")
-                await start_handler(event)
+                await response.reply("❌ يجب أن يكون الطول 10 أحرف بالضبط.")
+                await event.edit(
+                    get_main_menu_text(),
+                    buttons=get_main_menu_buttons()
+                )
                 return
-            # تحديث متغير البيئة
+            # تحديث متغير البيئة وإعادة التشغيل
             if update_config_and_restart("DIGIT_MAP", new_map):
                 await response.reply("✅ تم تحديث نمط الأرقام وإعادة تشغيل البوت. سيتم تفعيل التغيير بعد لحظات.")
             else:
                 await response.reply("⚠️ فشل تحديث النمط (Heroku API غير مضبوط).")
+            # لن نعدل رسالة الـ callback لأن البوت سيعاد تشغيله
     
-    # ===== عرض الحالة =====
     elif data == "status":
-        status_text = (
-            f"📊 **الحالة العامة**\n"
-            f"الاسم الوقتي: {'✅ مفعل' if AUTO_RENAME_ENABLED else '⏸️ معطل'}\n"
-            f"البايو الوقتي: {'✅ مفعل' if AUTO_BIO_ENABLED else '⏸️ معطل'}\n"
-            f"نص البايو: `{CUSTOM_BIO}`\n"
-            f"نمط الأرقام الحالي: `{DIGIT_MAP_STR}`"
+        await event.edit(
+            get_status_text(),
+            buttons=get_status_buttons()
         )
-        buttons = [[Button.inline("🔙 رجوع", data="back_main")]]
-        await event.edit(status_text, buttons=buttons)
     
-    # ===== العودة للقائمة الرئيسية =====
     elif data == "back_main":
-        await start_handler(event)
+        await event.edit(
+            get_main_menu_text(),
+            buttons=get_main_menu_buttons()
+        )
 
 # ======================== الحلقات المتوازية ========================
 async def rename_loop():
