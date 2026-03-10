@@ -7,7 +7,7 @@ import requests
 from telethon import TelegramClient, events, Button
 import heroku3
 
-# ======================== متغيرات البيئة الأساسية ========================
+# ======================== متغيرات البيئة ========================
 BOT_TOKEN = os.environ.get("TOKEN", "")
 API_ID = int(os.environ.get("API_ID", 0))
 API_HASH = os.environ.get("API_HASH", "")
@@ -127,14 +127,14 @@ async def rename_channel():
         result = response.json()
         if result.get("ok"):
             print("✅ تم تغيير الاسم")
-            await asyncio.sleep(2)
-            await delete_last_message()
+            await asyncio.sleep(2)  # انتظار لظهور رسالة النظام
+            await delete_last_message()  # حذف آخر رسالة
         else:
             print(f"❌ فشل تغيير الاسم: {result.get('description')}")
     except Exception as e:
         print(f"⚠️ خطأ في تغيير الاسم: {e}")
 
-# ======================== دوال إنشاء النصوص والأزرار (للتعديل) ========================
+# ======================== دوال إنشاء النصوص والأزرار ========================
 def get_main_menu_text():
     return "🔧 **لوحة تحكم البوت**\nاختر ما تريد:"
 
