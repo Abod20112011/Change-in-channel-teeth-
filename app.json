@@ -10,6 +10,16 @@
       "value": "",
       "required": true
     },
+    "API_ID": {
+      "description": "API ID من my.telegram.org (رقم)",
+      "value": "",
+      "required": true
+    },
+    "API_HASH": {
+      "description": "API HASH من my.telegram.org (نص)",
+      "value": "",
+      "required": true
+    },
     "CHANNEL_USERNAME": {
       "description": "معرف القناة (مثال: @ZQQ27)",
       "value": "",
