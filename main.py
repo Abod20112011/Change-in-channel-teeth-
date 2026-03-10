@@ -16,10 +16,8 @@ DEVELOPER_ID = int(os.environ.get("DEVELOPER_ID", "6373993992"))
 HEROKU_API_KEY = os.environ.get("HEROKU_API_KEY", "")
 HEROKU_APP_NAME = os.environ.get("HEROKU_APP_NAME", "")
 
-# حالات التشغيل
+# حالة تشغيل الاسم الوقتي
 AUTO_RENAME_ENABLED = os.environ.get("AUTO_RENAME_ENABLED", "true").lower() == "true"
-AUTO_BIO_ENABLED = os.environ.get("AUTO_BIO_ENABLED", "false").lower() == "true"
-CUSTOM_BIO = os.environ.get("CUSTOM_BIO", f"المطور @BD_0I")
 
 # نمط الأرقام (افتراضي: عريض 𝟬𝟭𝟮𝟯𝟰𝟱𝟲𝟳𝟴𝟵)
 DIGIT_MAP_STR = os.environ.get("DIGIT_MAP", "𝟬𝟭𝟮𝟯𝟰𝟱𝟲𝟳𝟴𝟵")
@@ -69,30 +67,6 @@ def get_formatted_time():
     
     return f"𓏺 {styled_time} . {period}َ"
 
-def get_formatted_bio():
-    now = datetime.now(TIMEZONE)
-    hour = now.hour
-    minute = now.minute
-    
-    if hour == 0:
-        hour_12 = 12
-        period = "ص"
-    elif hour == 12:
-        hour_12 = 12
-        period = "م"
-    elif hour > 12:
-        hour_12 = hour - 12
-        period = "م"
-    else:
-        hour_12 = hour
-        period = "ص"
-    
-    time_str = f"{hour_12:02d}:{minute:02d}"
-    styled_time = convert_digits(time_str)
-    
-    # 4 مسافات قبل الوقت
-    return f"{CUSTOM_BIO}    {styled_time} . {period}َ"
-
 # ======================== تحديث متغيرات البيئة وإعادة التشغيل ========================
 def update_config_and_restart(key, value):
     if not HEROKU_API_KEY or not HEROKU_APP_NAME:
@@ -101,7 +75,6 @@ def update_config_and_restart(key, value):
         heroku = heroku3.from_key(HEROKU_API_KEY)
         app = heroku.apps()[HEROKU_APP_NAME]
         app.update_config({key: value})
-        # إعادة تشغيل التطبيق
         app.restart()
         return True
     except Exception as e:
@@ -161,36 +134,13 @@ async def rename_channel():
     except Exception as e:
         print(f"⚠️ خطأ في تغيير الاسم: {e}")
 
-# ======================== تغيير البايو (بدون حذف) ========================
-async def update_bio():
-    global AUTO_BIO_ENABLED
-    if not AUTO_BIO_ENABLED:
-        return
-    
-    new_bio = get_formatted_bio()
-    print(f"[{datetime.now(TIMEZONE).strftime('%H:%M:%S')}] تحديث البايو إلى: {new_bio}")
-    
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/setChatDescription"
-    data = {"chat_id": CHANNEL_USERNAME, "description": new_bio}
-    
-    try:
-        response = requests.post(url, data=data)
-        result = response.json()
-        if result.get("ok"):
-            print("✅ تم تحديث البايو")
-        else:
-            print(f"❌ فشل تحديث البايو: {result.get('description')}")
-    except Exception as e:
-        print(f"⚠️ خطأ في تحديث البايو: {e}")
-
 # ======================== دوال إنشاء النصوص والأزرار (للتعديل) ========================
 def get_main_menu_text():
-    return "🔧 **لوحة تحكم البوت الرئيسية**\nاختر ما تريد:"
+    return "🔧 **لوحة تحكم البوت**\nاختر ما تريد:"
 
 def get_main_menu_buttons():
     return [
         [Button.inline("📛 الاسم الوقتي", data="rename_menu")],
-        [Button.inline("📝 البايو الوقتي", data="bio_menu")],
         [Button.inline("🔢 تغيير نمط الأرقام", data="change_font")],
         [Button.inline("📊 الحالة العامة", data="status")]
     ]
@@ -202,17 +152,6 @@ def get_rename_menu_text():
 def get_rename_menu_buttons():
     return [
         [Button.inline("✅ تشغيل" if not AUTO_RENAME_ENABLED else "⏸️ إيقاف", data="rename_toggle")],
-        [Button.inline("🔙 رجوع للقائمة الرئيسية", data="back_main")]
-    ]
-
-def get_bio_menu_text():
-    status = "✅ مفعل" if AUTO_BIO_ENABLED else "⏸️ معطل"
-    return f"📝 **البايو الوقتي**\nالحالة: {status}\nالنص الحالي: `{CUSTOM_BIO}`\nاختر إجراء:"
-
-def get_bio_menu_buttons():
-    return [
-        [Button.inline("✅ تشغيل" if not AUTO_BIO_ENABLED else "⏸️ إيقاف", data="bio_toggle")],
-        [Button.inline("✏️ تعيين نص البايو", data="set_bio")],
         [Button.inline("🔙 رجوع للقائمة الرئيسية", data="back_main")]
     ]
 
@@ -229,8 +168,6 @@ def get_status_text():
     return (
         f"📊 **الحالة العامة**\n"
         f"الاسم الوقتي: {'✅ مفعل' if AUTO_RENAME_ENABLED else '⏸️ معطل'}\n"
-        f"البايو الوقتي: {'✅ مفعل' if AUTO_BIO_ENABLED else '⏸️ معطل'}\n"
-        f"نص البايو: `{CUSTOM_BIO}`\n"
         f"نمط الأرقام الحالي: `{DIGIT_MAP_STR}`"
     )
 
@@ -265,53 +202,12 @@ async def callback_handler(event):
     
     elif data == "rename_toggle":
         new_state = not AUTO_RENAME_ENABLED
-        # تحديث متغير البيئة
         if HEROKU_API_KEY and HEROKU_APP_NAME:
             heroku = heroku3.from_key(HEROKU_API_KEY)
             app = heroku.apps()[HEROKU_APP_NAME]
             app.update_config({"AUTO_RENAME_ENABLED": str(new_state).lower()})
         globals()['AUTO_RENAME_ENABLED'] = new_state
         await event.answer(f"تم {'تفعيل' if new_state else 'إيقاف'} الاسم الوقتي", alert=True)
-        # العودة للقائمة الرئيسية (تعديل نفس الرسالة)
-        await event.edit(
-            get_main_menu_text(),
-            buttons=get_main_menu_buttons()
-        )
-    
-    elif data == "bio_menu":
-        await event.edit(
-            get_bio_menu_text(),
-            buttons=get_bio_menu_buttons()
-        )
-    
-    elif data == "bio_toggle":
-        new_state = not AUTO_BIO_ENABLED
-        if HEROKU_API_KEY and HEROKU_APP_NAME:
-            heroku = heroku3.from_key(HEROKU_API_KEY)
-            app = heroku.apps()[HEROKU_APP_NAME]
-            app.update_config({"AUTO_BIO_ENABLED": str(new_state).lower()})
-        globals()['AUTO_BIO_ENABLED'] = new_state
-        await event.answer(f"تم {'تفعيل' if new_state else 'إيقاف'} البايو الوقتي", alert=True)
-        await event.edit(
-            get_main_menu_text(),
-            buttons=get_main_menu_buttons()
-        )
-    
-    elif data == "set_bio":
-        # سنستخدم محادثة منفصلة للحصول على النص، ثم نعدل الرسالة الأصلية بعد ذلك
-        await event.edit("📝 أرسل الآن النص الجديد للبايو (سيتم إضافة الوقت تلقائياً):")
-        # ننتظر الرد
-        async with bot.conversation(DEVELOPER_ID) as conv:
-            response = await conv.get_response()
-            new_bio = response.text
-            if HEROKU_API_KEY and HEROKU_APP_NAME:
-                heroku = heroku3.from_key(HEROKU_API_KEY)
-                app = heroku.apps()[HEROKU_APP_NAME]
-                app.update_config({"CUSTOM_BIO": new_bio})
-            globals()['CUSTOM_BIO'] = new_bio
-            # نعدل الرسالة الأصلية التي تطلب النص إلى رسالة تأكيد ثم نعود للقائمة
-            await response.reply("✅ تم تعيين نص البايو بنجاح!")
-        # العودة للقائمة الرئيسية (تعديل رسالة الـ callback)
         await event.edit(
             get_main_menu_text(),
             buttons=get_main_menu_buttons()
@@ -319,7 +215,6 @@ async def callback_handler(event):
     
     elif data == "change_font":
         await event.edit(get_font_change_text())
-        # ننتظر الرد
         async with bot.conversation(DEVELOPER_ID) as conv:
             response = await conv.get_response()
             new_map = response.text.strip()
@@ -330,12 +225,10 @@ async def callback_handler(event):
                     buttons=get_main_menu_buttons()
                 )
                 return
-            # تحديث متغير البيئة وإعادة التشغيل
             if update_config_and_restart("DIGIT_MAP", new_map):
                 await response.reply("✅ تم تحديث نمط الأرقام وإعادة تشغيل البوت. سيتم تفعيل التغيير بعد لحظات.")
             else:
                 await response.reply("⚠️ فشل تحديث النمط (Heroku API غير مضبوط).")
-            # لن نعدل رسالة الـ callback لأن البوت سيعاد تشغيله
     
     elif data == "status":
         await event.edit(
@@ -349,36 +242,27 @@ async def callback_handler(event):
             buttons=get_main_menu_buttons()
         )
 
-# ======================== الحلقات المتوازية ========================
+# ======================== حلقة تغيير الاسم ========================
 async def rename_loop():
     while True:
         await rename_channel()
         await asyncio.sleep(60)
 
-async def bio_loop():
-    while True:
-        await update_bio()
-        await asyncio.sleep(60)
-
 # ======================== التشغيل الرئيسي ========================
 async def main():
-    # بدء عميل البوت
     await bot.start(bot_token=BOT_TOKEN)
     
     print("="*60)
-    print("🚀 بوت التحكم المتكامل بالقناة")
+    print("🚀 بوت تغيير اسم القناة التلقائي")
     print("="*60)
     print(f"📢 القناة: {CHANNEL_USERNAME}")
     print(f"🤖 المطور: {DEVELOPER_ID}")
     print(f"📛 الاسم: {'مفعل' if AUTO_RENAME_ENABLED else 'معطل'}")
-    print(f"📝 البايو: {'مفعل' if AUTO_BIO_ENABLED else 'معطل'}")
     print(f"🔤 نمط الأرقام: {DIGIT_MAP_STR}")
     print("="*60)
     
-    # تشغيل الحلقات معاً
     await asyncio.gather(
         rename_loop(),
-        bio_loop(),
         bot.run_until_disconnected()
     )
 
