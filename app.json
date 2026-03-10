@@ -1,7 +1,7 @@
 {
-  "name": "Channel Control Bot",
-  "description": "بوت للتحكم في اسم القناة والبايو مع أزرار تحكم للمطور",
-  "keywords": ["telegram", "bot", "channel", "rename", "bio"],
+  "name": "Channel Rename Bot",
+  "description": "بوت لتغيير اسم القناة تلقائياً مع حذف آخر رسالة وأزرار تحكم",
+  "keywords": ["telegram", "bot", "channel", "rename"],
   "repository": "https://github.com/Abod20112011/Change-in-channel-teeth-",
   "logo": "https://i.imgur.com/82z9q1W.png",
   "env": {
