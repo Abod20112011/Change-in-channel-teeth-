@@ -1,9 +1,8 @@
 import os
 import asyncio
-import time
+import requests
 from datetime import datetime
 import pytz
-import requests
 from telethon import TelegramClient, events, Button
 import heroku3
 
@@ -128,7 +127,7 @@ async def rename_channel():
         if result.get("ok"):
             print("✅ تم تغيير الاسم")
             await asyncio.sleep(2)  # انتظار لظهور رسالة النظام
-            await delete_last_message()  # حذف آخر رسالة
+            await delete_last_message()
         else:
             print(f"❌ فشل تغيير الاسم: {result.get('description')}")
     except Exception as e:
