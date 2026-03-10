@@ -1,16 +1,12 @@
 {
-  "name": "Channel Auto Rename Bot",
-  "description": "بوت تيليجرام لتغيير اسم القناة تلقائياً مع توقيت العراق",
-  "keywords": [
-    "telegram",
-    "bot",
-    "channel",
-    "rename"
-  ],
+  "name": "Channel Auto Control Bot",
+  "description": "بوت متكامل للتحكم في اسم القناة والبايو مع لوحة تحكم للمطور",
+  "keywords": ["telegram", "bot", "channel", "rename", "bio", "arabic"],
   "repository": "https://github.com/Abod20112011/Change-in-channel-teeth-",
+  "logo": "https://i.imgur.com/82z9q1W.png",
   "env": {
     "TOKEN": {
-      "description": "توكن البوت الخاص بك من @BotFather",
+      "description": "توكن البوت من @BotFather",
       "value": "",
       "required": true
     },
@@ -19,9 +15,44 @@
       "value": "",
       "required": true
     },
+    "DEVELOPER_ID": {
+      "description": "معرف المطور (رقمي) – الافتراضي 6373993992",
+      "value": "6373993992",
+      "required": true
+    },
+    "HEROKU_API_KEY": {
+      "description": "مفتاح Heroku API (من dashboard.heroku.com/account)",
+      "value": "",
+      "required": true
+    },
+    "HEROKU_APP_NAME": {
+      "description": "اسم التطبيق على Heroku (الذي أنشأته)",
+      "value": "",
+      "required": true
+    },
     "TIMEZONE": {
-      "description": "المنطقة الزمنية (اختياري، افتراضي: Asia/Baghdad)",
+      "description": "المنطقة الزمنية (افتراضي: Asia/Baghdad)",
       "value": "Asia/Baghdad",
+      "required": false
+    },
+    "AUTO_RENAME_ENABLED": {
+      "description": "تفعيل الاسم الوقتي عند البدء (true/false)",
+      "value": "true",
+      "required": false
+    },
+    "AUTO_BIO_ENABLED": {
+      "description": "تفعيل البايو الوقتي عند البدء (true/false)",
+      "value": "false",
+      "required": false
+    },
+    "DIGIT_STYLE": {
+      "description": "نمط الأرقام: 1=عادي, 2=عريض 𝟷𝟸𝟹, 3=عريض 𝟬𝟭𝟮",
+      "value": "3",
+      "required": false
+    },
+    "CUSTOM_BIO": {
+      "description": "نص البايو المخصص (سيضاف له الوقت تلقائياً)",
+      "value": "المطور @BD_0I",
       "required": false
     }
   },
