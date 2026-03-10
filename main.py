@@ -5,23 +5,20 @@ from datetime import datetime
 import pytz
 import requests
 from telethon import TelegramClient, events, Button
-from telethon.tl.types import User
 import heroku3
 
-# ======================== متغيرات البيئة ========================
+# ======================== متغيرات البيئة الأساسية ========================
 BOT_TOKEN = os.environ.get("TOKEN", "")
 API_ID = int(os.environ.get("API_ID", 0))
 API_HASH = os.environ.get("API_HASH", "")
 CHANNEL_USERNAME = os.environ.get("CHANNEL_USERNAME", "")
-TIMEZONE_STR = os.environ.get("TIMEZONE", "Asia/Baghdad")
 DEVELOPER_ID = int(os.environ.get("DEVELOPER_ID", "6373993992"))
 HEROKU_API_KEY = os.environ.get("HEROKU_API_KEY", "")
 HEROKU_APP_NAME = os.environ.get("HEROKU_APP_NAME", "")
 
-# حالات التشغيل
+# حالات التشغيل (تقرأ من متغيرات البيئة، لكن سنعطيها قيماً افتراضية هنا)
 AUTO_RENAME_ENABLED = os.environ.get("AUTO_RENAME_ENABLED", "true").lower() == "true"
 AUTO_BIO_ENABLED = os.environ.get("AUTO_BIO_ENABLED", "false").lower() == "true"
-DIGIT_STYLE = int(os.environ.get("DIGIT_STYLE", "3"))  # 1: عادي، 2: عريض 𝟷𝟸𝟹، 3: عريض 𝟬𝟭𝟮
 CUSTOM_BIO = os.environ.get("CUSTOM_BIO", f"المطور @BD_0I")
 
 # التحقق من البيانات الأساسية
@@ -32,23 +29,25 @@ if not API_ID or not API_HASH:
 if not CHANNEL_USERNAME:
     raise ValueError("❌ CHANNEL_USERNAME must be set")
 
-# ======================== تعريفات الأرقام ========================
-DIGIT_STYLES = {
-    1: {'0':'0','1':'1','2':'2','3':'3','4':'4','5':'5','6':'6','7':'7','8':'8','9':'9'},
-    2: {'0':'𝟶','1':'𝟷','2':'𝟸','3':'𝟹','4':'𝟺','5':'𝟻','6':'𝟼','7':'𝟽','8':'𝟾','9':'𝟿'},
-    3: {'0':'𝟬','1':'𝟭','2':'𝟮','3':'𝟯','4':'𝟰','5':'𝟱','6':'𝟲','7':'𝟳','8':'𝟴','9':'𝟵'}
+# ======================== إعدادات ثابتة ========================
+# الأرقام العريضة (النمط الوحيد)
+BOLD_DIGITS = {
+    '0': '𝟬', '1': '𝟭', '2': '𝟮', '3': '𝟯', '4': '𝟰',
+    '5': '𝟱', '6': '𝟲', '7': '𝟳', '8': '𝟴', '9': '𝟵'
 }
 
+# توقيت العراق (ثابت)
+TIMEZONE = pytz.timezone('Asia/Baghdad')
+
 # ======================== إنشاء عميل البوت ========================
-bot = TelegramClient('bot_session', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
+bot = TelegramClient('bot_session', API_ID, API_HASH)
 
 # ======================== دوال مساعدة ========================
-def convert_digits(number_str, style):
-    digit_map = DIGIT_STYLES.get(style, DIGIT_STYLES[3])
-    return ''.join(digit_map.get(ch, ch) for ch in number_str)
+def convert_to_bold(number_str):
+    return ''.join(BOLD_DIGITS.get(ch, ch) for ch in number_str)
 
 def get_formatted_time():
-    now = datetime.now(pytz.timezone(TIMEZONE_STR))
+    now = datetime.now(TIMEZONE)
     hour = now.hour
     minute = now.minute
     
@@ -67,12 +66,12 @@ def get_formatted_time():
         period = "ص"
     
     time_str = f"{hour_12:02d}:{minute:02d}"
-    styled_time = convert_digits(time_str, DIGIT_STYLE)
+    bold_time = convert_to_bold(time_str)
     
-    return f"مَ {styled_time} {period}َ"
+    return f"مَ {bold_time} {period}َ"
 
 def get_formatted_bio():
-    now = datetime.now(pytz.timezone(TIMEZONE_STR))
+    now = datetime.now(TIMEZONE)
     hour = now.hour
     minute = now.minute
     
@@ -90,11 +89,11 @@ def get_formatted_bio():
         period = "ص"
     
     time_str = f"{hour_12:02d}:{minute:02d}"
-    styled_time = convert_digits(time_str, DIGIT_STYLE)
+    bold_time = convert_to_bold(time_str)
     
-    return f"{CUSTOM_BIO} {styled_time} {period}"
+    return f"{CUSTOM_BIO} {bold_time} {period}"
 
-# ======================== تحديث متغيرات البيئة ========================
+# ======================== تحديث متغيرات البيئة عبر Heroku API ========================
 def update_config_var(key, value):
     if not HEROKU_API_KEY or not HEROKU_APP_NAME:
         return False
@@ -107,7 +106,7 @@ def update_config_var(key, value):
         print(f"⚠️ فشل تحديث {key}: {e}")
         return False
 
-# ======================== دالة حذف آخر رسالة (تستخدم فقط لتغيير الاسم) ========================
+# ======================== حذف آخر رسالة في القناة ========================
 async def delete_last_message():
     try:
         get_updates_url = f"https://api.telegram.org/bot{BOT_TOKEN}/getUpdates"
@@ -143,7 +142,7 @@ async def rename_channel():
         return
     
     new_name = get_formatted_time()
-    print(f"[{datetime.now().strftime('%H:%M:%S')}] تغيير الاسم إلى: {new_name}")
+    print(f"[{datetime.now(TIMEZONE).strftime('%H:%M:%S')}] تغيير الاسم إلى: {new_name}")
     
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/setChatTitle"
     data = {"chat_id": CHANNEL_USERNAME, "title": new_name}
@@ -153,8 +152,8 @@ async def rename_channel():
         result = response.json()
         if result.get("ok"):
             print("✅ تم تغيير الاسم")
-            await asyncio.sleep(2)  # انتظار لظهور رسالة النظام
-            await delete_last_message()  # حذف آخر رسالة فقط هنا
+            await asyncio.sleep(2)
+            await delete_last_message()
         else:
             print(f"❌ فشل تغيير الاسم: {result.get('description')}")
     except Exception as e:
@@ -167,7 +166,7 @@ async def update_bio():
         return
     
     new_bio = get_formatted_bio()
-    print(f"[{datetime.now().strftime('%H:%M:%S')}] تحديث البايو إلى: {new_bio}")
+    print(f"[{datetime.now(TIMEZONE).strftime('%H:%M:%S')}] تحديث البايو إلى: {new_bio}")
     
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/setChatDescription"
     data = {"chat_id": CHANNEL_USERNAME, "description": new_bio}
@@ -192,7 +191,6 @@ async def start_handler(event):
     buttons = [
         [Button.inline("📛 الاسم الوقتي", data="rename_menu")],
         [Button.inline("📝 البايو الوقتي", data="bio_menu")],
-        [Button.inline("🔢 تغيير نمط الأرقام", data="change_style")],
         [Button.inline("📊 الحالة العامة", data="status")]
     ]
     await event.reply("🔧 **لوحة تحكم البوت الرئيسية**\nاختر ما تريد:", buttons=buttons)
@@ -248,32 +246,12 @@ async def callback_handler(event):
             await response.reply("✅ تم تعيين نص البايو بنجاح!")
         await start_handler(event)
     
-    # ===== قائمة تغيير نمط الأرقام =====
-    elif data == "change_style":
-        style_names = {1: "عادي (123)", 2: "عريض (𝟷𝟸𝟹)", 3: "عريض (𝟬𝟭𝟮)"}
-        buttons = [
-            [Button.inline(f"{style_names[1]}", data="style_1")],
-            [Button.inline(f"{style_names[2]}", data="style_2")],
-            [Button.inline(f"{style_names[3]}", data="style_3")],
-            [Button.inline("🔙 رجوع", data="back_main")]
-        ]
-        await event.edit("🔢 اختر نمط الأرقام:", buttons=buttons)
-    
-    elif data.startswith("style_"):
-        new_style = int(data.split("_")[1])
-        update_config_var("DIGIT_STYLE", str(new_style))
-        globals()['DIGIT_STYLE'] = new_style
-        await event.answer(f"تم تغيير النمط إلى {new_style}", alert=True)
-        await start_handler(event)
-    
     # ===== عرض الحالة =====
     elif data == "status":
-        style_names = {1: "عادي", 2: "عريض 𝟷𝟸𝟹", 3: "عريض 𝟬𝟭𝟮"}
         status_text = (
             f"📊 **الحالة العامة**\n"
             f"الاسم الوقتي: {'✅ مفعل' if AUTO_RENAME_ENABLED else '⏸️ معطل'}\n"
             f"البايو الوقتي: {'✅ مفعل' if AUTO_BIO_ENABLED else '⏸️ معطل'}\n"
-            f"نمط الأرقام: {style_names[DIGIT_STYLE]}\n"
             f"نص البايو: `{CUSTOM_BIO}`"
         )
         buttons = [[Button.inline("🔙 رجوع", data="back_main")]]
@@ -296,17 +274,19 @@ async def bio_loop():
 
 # ======================== التشغيل الرئيسي ========================
 async def main():
+    # بدء عميل البوت
+    await bot.start(bot_token=BOT_TOKEN)
+    
     print("="*60)
     print("🚀 بوت التحكم المتكامل بالقناة")
     print("="*60)
     print(f"📢 القناة: {CHANNEL_USERNAME}")
     print(f"🤖 المطور: {DEVELOPER_ID}")
-    print(f"🔢 نمط الأرقام: {DIGIT_STYLE}")
     print(f"📛 الاسم: {'مفعل' if AUTO_RENAME_ENABLED else 'معطل'}")
     print(f"📝 البايو: {'مفعل' if AUTO_BIO_ENABLED else 'معطل'}")
     print("="*60)
     
-    # تشغيل جميع الحلقات والبوت معاً
+    # تشغيل الحلقات معاً
     await asyncio.gather(
         rename_loop(),
         bio_loop(),
