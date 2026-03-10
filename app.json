@@ -7,7 +7,7 @@
     "channel",
     "rename"
   ],
-  "repository": "https://github.com/Abod20112011/Change-in-channel-teeth-.git",
+  "repository": "https://github.com/Abod20112011/Change-in-channel-teeth-",
   "env": {
     "TOKEN": {
       "description": "توكن البوت الخاص بك من @BotFather",
@@ -20,7 +20,7 @@
       "required": true
     },
     "TIMEZONE": {
-      "description": "المنطقة الزمنية (افتراضي: Asia/Baghdad)",
+      "description": "المنطقة الزمنية (اختياري، افتراضي: Asia/Baghdad)",
       "value": "Asia/Baghdad",
       "required": false
     }
